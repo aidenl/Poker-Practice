@@ -1,0 +1,13 @@
+{
+  "name": "Preflop Drill",
+  "short_name": "Preflop Drill",
+  "description": "8-handed No Limit Hold'em preflop opening practice",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#071411",
+  "theme_color": "#071411",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

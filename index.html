@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#071411" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <title>Preflop Drill</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      .hand-display{gap:10px;padding-left:0}
+      .card{margin-left:0}
+      .hero-marker.lj{top:-4px;left:calc(50% - 24px)}
+      .hero-marker.hj{top:24px;right:9%}
+      .hand-display.dealing .card{animation:deal-card .42s cubic-bezier(.18,.8,.28,1) both}
+      .hand-display.dealing .card:nth-child(2){animation-delay:.09s}
+      @keyframes deal-card{from{opacity:0;transform:translateY(20px) rotate(-4deg)}to{opacity:1;transform:translateY(0) rotate(0)}}
+      .app-layout{width:min(100%,880px);margin:auto;display:grid;grid-template-columns:minmax(0,570px) 255px;align-items:start;gap:24px}
+      .app-layout .app-shell{width:100%;margin:0}
+      .history-panel{margin-top:28px;min-height:230px;border:1px solid #2b453c;border-radius:19px;background:linear-gradient(145deg,#10261f,#0b1a16);padding:18px 16px;box-shadow:0 14px 35px #0003}
+      .history-heading{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid #29443a}.history-heading h2{font-size:17px;letter-spacing:-.04em}.history-heading .eyebrow{margin-bottom:3px}.history-heading>span{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#1c3c31;color:#9db4aa;font:11px 'DM Mono'}
+      .history-empty{margin:29px 0;text-align:center;color:#829a90;font-size:12px;line-height:1.7}.history-list{list-style:none;margin:11px 0 0;padding:0;display:grid;gap:8px}.history-item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px;border-radius:9px;background:#153028}.history-item .history-position{font:10px 'DM Mono';letter-spacing:.06em;color:#9db4aa}.history-item .history-hand{font:600 16px 'DM Mono';color:#f6f0df}.history-item .history-answer{grid-row:1 / span 2;grid-column:2;color:#74c6ff;font:500 10px 'DM Mono';text-align:right}.history-item .history-answer small{display:block;color:#779287;font:9px 'DM Mono';margin-bottom:2px}
+      @media(max-width:760px){.app-layout{display:block;width:100%}.history-panel{width:calc(100% - 40px);margin:0 auto 24px}.app-layout .app-shell{margin:0 auto}}
+      .mode-toggle{border:1px solid #426156;border-radius:13px;background:#19362c;color:#cde1d6;padding:4px 8px;font:500 9px 'DM Mono';letter-spacing:.05em;cursor:pointer}
+      .mode-toggle.random{border-color:#448dc1;background:#176b9d24;color:#74c6ff}
+      .switch-button:disabled{opacity:.35;cursor:not-allowed}
+    </style>
+    <style>.dealer-chip{position:absolute;right:-10px;top:-8px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#f6f0df;color:#183128;border:2px solid #b9d0c0;box-shadow:0 3px 7px #0007;font:700 11px 'DM Mono';font-style:normal}.history-hand .suit-red{color:#f07062}.history-hand .suit-blue{color:#74c6ff}.hero-marker.co{top:97px;right:-17px}.hero-marker.btn{bottom:-9px;right:14%}</style>
+  </head>
+  <body>
+    <div class="app-layout">
+    <main class="app-shell">
+      <header>
+        <div>
+          <p class="eyebrow">NO LIMIT HOLD'EM · 8 HANDED</p>
+          <h1>Preflop <em>Drill</em></h1>
+        </div>
+        <button class="icon-button" id="chartButton" aria-label="오프닝 레인지 보기">?</button>
+      </header>
+
+      <section class="table-section" aria-label="포커 테이블">
+        <div class="table-wrap">
+          <div class="poker-table">
+            <div class="felt-label">PREFLOP</div>
+            <div class="pot"><span>POT</span><strong>1.5 BB</strong></div>
+            <div class="seat seat-top"><span>LJ</span></div>
+            <div class="seat seat-upper-left"><span>UTG+1</span></div>
+            <div class="seat seat-upper-right"><span>HJ</span></div>
+            <div class="seat seat-left"><span>UTG</span></div>
+            <div class="seat seat-right"><span>CO</span></div>
+            <div class="seat seat-bottom-left"><span>BB</span></div>
+            <div class="seat seat-bottom-right"><span>BTN</span><i class="dealer-chip" aria-label="딜러 버튼">D</i></div>
+            <div class="seat seat-bottom"><span>SB</span></div>
+            <div class="hero-marker utg" id="heroMarker"><span>HERO</span></div>
+          </div>
+        </div>
+        <div class="status-row">
+          <span class="live-dot"></span>
+          <span>YOUR POSITION</span>
+          <strong id="positionText">UTG</strong>
+          <button id="switchPosition" class="switch-button">변경</button>
+          <button id="modeToggle" class="mode-toggle" aria-pressed="false">FIXED</button>
+        </div>
+      </section>
+
+      <section class="decision-card" aria-live="polite">
+        <p class="prompt">당신의 핸드</p>
+        <div class="hand-display" id="handDisplay" aria-label="현재 핸드">
+          <div class="card red"><b>A</b><span>♥</span></div>
+          <div class="card black"><b>K</b><span>♠</span></div>
+        </div>
+        <p class="question">첫 액션입니다. 어떻게 플레이할까요?</p>
+        <div class="actions" id="actions">
+          <button class="action fold" data-action="fold"><span>FOLD</span><small>핸드를 버린다</small></button>
+          <button class="action raise" data-action="raise"><span>RAISE</span><small>2.5 BB 오픈</small></button>
+        </div>
+        <div class="feedback" id="feedback" hidden>
+          <span class="feedback-icon" id="feedbackIcon">✓</span>
+          <div><strong id="feedbackTitle">정답입니다!</strong><p id="feedbackText"></p></div>
+          <button id="nextHand">다음 핸드 <span>→</span></button>
+        </div>
+      </section>
+
+      <footer>
+        <div><span>정답</span><strong id="correctCount">0</strong></div>
+        <div><span>시도</span><strong id="attemptCount">0</strong></div>
+        <div><span>정확도</span><strong id="accuracy">—</strong></div>
+      </footer>
+    </main>
+    <aside class="history-panel" aria-label="오답 히스토리">
+      <div class="history-heading">
+        <div><p class="eyebrow">REVIEW</p><h2>오답 히스토리</h2></div>
+        <span id="historyCount">0</span>
+      </div>
+      <p class="history-empty" id="historyEmpty">아직 틀린 핸드가 없습니다.<br />계속 연습해 보세요.</p>
+      <ol class="history-list" id="historyList"></ol>
+    </aside>
+    </div>
+
+    <dialog id="chartDialog">
+      <div class="dialog-head"><div><p class="eyebrow" id="rangePosition">UTG / UTG+1</p><h2>Open raise range</h2></div><button id="closeChart" class="icon-button" aria-label="닫기">×</button></div>
+      <p class="legend"><i></i> 파란 핸드만 레이즈</p>
+      <div class="range-grid" id="rangeGrid" aria-label="오프닝 핸드 차트"></div>
+      <p class="dialog-note" id="rangeDescription">페어, AJs+, AQo+, KQs, QJs, JTs, T9s, 98s</p>
+    </dialog>
+    <script src="app.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+  </body>
+</html>
