@@ -23,19 +23,25 @@
       .history-heading{display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid #29443a}.history-heading h2{font-size:17px;letter-spacing:-.04em}.history-heading .eyebrow{margin-bottom:3px}.history-heading>span{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#1c3c31;color:#9db4aa;font:11px 'DM Mono'}
       .history-empty{margin:29px 0;text-align:center;color:#829a90;font-size:12px;line-height:1.7}.history-list{list-style:none;margin:11px 0 0;padding:0;display:grid;gap:8px}.history-item{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px;border-radius:9px;background:#153028}.history-item .history-position{font:10px 'DM Mono';letter-spacing:.06em;color:#9db4aa}.history-item .history-hand{font:600 16px 'DM Mono';color:#f6f0df}.history-item .history-answer{grid-row:1 / span 2;grid-column:2;color:#74c6ff;font:500 10px 'DM Mono';text-align:right}.history-item .history-answer small{display:block;color:#779287;font:9px 'DM Mono';margin-bottom:2px}
       @media(max-width:760px){.app-layout{display:block;width:100%}.history-panel{width:calc(100% - 40px);margin:0 auto 24px}.app-layout .app-shell{margin:0 auto}}
+      .game-toggle{display:flex;border:1px solid #38534a;border-radius:9px;overflow:hidden;margin-left:auto;margin-right:8px}.game-toggle button{border:0;background:#102820;color:#8ca49a;padding:7px 8px;font:500 10px 'DM Mono';cursor:pointer}.game-toggle button.active{background:#74c6ff;color:#062438}
       .mode-toggle{border:1px solid #426156;border-radius:13px;background:#19362c;color:#cde1d6;padding:4px 8px;font:500 9px 'DM Mono';letter-spacing:.05em;cursor:pointer}
       .mode-toggle.random{border-color:#448dc1;background:#176b9d24;color:#74c6ff}
       .switch-button:disabled{opacity:.35;cursor:not-allowed}
     </style>
     <style>.dealer-chip{position:absolute;right:-10px;top:-8px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#f6f0df;color:#183128;border:2px solid #b9d0c0;box-shadow:0 3px 7px #0007;font:700 11px 'DM Mono';font-style:normal}.history-hand .suit-red{color:#f07062}.history-hand .suit-blue{color:#74c6ff}.hero-marker.co{top:97px;right:-17px}.hero-marker.btn{bottom:-9px;right:14%}</style>
+    <style>.hero-marker.sb{bottom:-27px;left:calc(50% - 24px)}.hero-marker.bb{bottom:-9px;left:14%}.range-cell.mtt-open{background:#ff5757;border-color:#ff9b9b}.range-cell.pair.mtt-open{background:#ff5757}.range-cell.mtt-call{background:#31a847;border-color:#93e39f}.legend.mtt i{background:#ff5757}.legend.mtt-call i{background:#31a847}.actions{grid-template-columns:repeat(3,1fr)}.call{border-color:#4ea65f;background:#248b3924}.call span{color:#73db80}</style>
   </head>
   <body>
     <div class="app-layout">
     <main class="app-shell">
       <header>
         <div>
-          <p class="eyebrow">NO LIMIT HOLD'EM · 8 HANDED</p>
+          <p class="eyebrow">NO LIMIT HOLD'EM · MTT · 75 BB · 9 HANDED</p>
           <h1>Preflop <em>Drill</em></h1>
+        </div>
+        <div class="game-toggle" role="group" aria-label="게임 종류">
+          <button data-game="cash">CASH</button>
+          <button class="active" data-game="mtt">MTT</button>
         </div>
         <button class="icon-button" id="chartButton" aria-label="오프닝 레인지 보기">?</button>
       </header>
@@ -45,14 +51,14 @@
           <div class="poker-table">
             <div class="felt-label">PREFLOP</div>
             <div class="pot"><span>POT</span><strong>1.5 BB</strong></div>
-            <div class="seat seat-top"><span>LJ</span></div>
-            <div class="seat seat-upper-left"><span>UTG+1</span></div>
-            <div class="seat seat-upper-right"><span>HJ</span></div>
-            <div class="seat seat-left"><span>UTG</span></div>
-            <div class="seat seat-right"><span>CO</span></div>
-            <div class="seat seat-bottom-left"><span>BB</span></div>
-            <div class="seat seat-bottom-right"><span>BTN</span><i class="dealer-chip" aria-label="딜러 버튼">D</i></div>
-            <div class="seat seat-bottom"><span>SB</span></div>
+            <div class="seat seat-top"><span data-seat="top">LJ</span></div>
+            <div class="seat seat-upper-left"><span data-seat="upper-left">UTG+1</span></div>
+            <div class="seat seat-upper-right"><span data-seat="upper-right">HJ</span></div>
+            <div class="seat seat-left"><span data-seat="left">UTG</span></div>
+            <div class="seat seat-right"><span data-seat="right">CO</span></div>
+            <div class="seat seat-bottom-left"><span data-seat="bottom-left">BB</span></div>
+            <div class="seat seat-bottom-right"><span data-seat="bottom-right">BTN</span><i class="dealer-chip" aria-label="딜러 버튼">D</i></div>
+            <div class="seat seat-bottom"><span data-seat="bottom">SB</span></div>
             <div class="hero-marker utg" id="heroMarker"><span>HERO</span></div>
           </div>
         </div>
@@ -74,6 +80,7 @@
         <p class="question">첫 액션입니다. 어떻게 플레이할까요?</p>
         <div class="actions" id="actions">
           <button class="action fold" data-action="fold"><span>FOLD</span><small>핸드를 버린다</small></button>
+          <button class="action call" data-action="call"><span>CALL</span><small>빅 블라인드를 맞춘다</small></button>
           <button class="action raise" data-action="raise"><span>RAISE</span><small>2.5 BB 오픈</small></button>
         </div>
         <div class="feedback" id="feedback" hidden>
@@ -101,7 +108,7 @@
 
     <dialog id="chartDialog">
       <div class="dialog-head"><div><p class="eyebrow" id="rangePosition">UTG / UTG+1</p><h2>Open raise range</h2></div><button id="closeChart" class="icon-button" aria-label="닫기">×</button></div>
-      <p class="legend"><i></i> 파란 핸드만 레이즈</p>
+      <p class="legend" id="rangeLegend"><i></i> 파란 핸드만 레이즈</p>
       <div class="range-grid" id="rangeGrid" aria-label="오프닝 핸드 차트"></div>
       <p class="dialog-note" id="rangeDescription">페어, AJs+, AQo+, KQs, QJs, JTs, T9s, 98s</p>
     </dialog>
