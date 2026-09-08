@@ -1,18 +1,20 @@
 const ranks = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 const suits = [{symbol:'♥',color:'red'},{symbol:'♦',color:'red'},{symbol:'♠',color:'black'},{symbol:'♣',color:'black'}];
-const earlyOpenHands = new Set(['AJs','AQs','AKs','AQo','AKo','KQs','QJs','JTs','T9s','98s']);
-const middleOpenHands = new Set([
+const allPairs = new Set(ranks.map(rank=>rank+rank));
+const withPairs = hands => new Set([...allPairs,...hands]);
+const earlyOpenHands = withPairs(['AJs','AQs','AKs','AQo','AKo','KQs','QJs','JTs','T9s','98s']);
+const middleOpenHands = withPairs([
   'A9s','ATs','AJs','AQs','AKs','KTs','KJs','KQs','QTs','QJs','J9s','JTs',
   'T8s','T9s','97s','98s','87s','76s','65s','AJo','AQo','AKo','KJo','KQo'
 ]);
-const cutoffOpenHands = new Set([
+const cutoffOpenHands = withPairs([
   'A2s','A3s','A4s','A5s','A6s','A7s','A8s','A9s','ATs','AJs','AQs','AKs',
   'K7s','K8s','K9s','KTs','KJs','KQs','Q8s','Q9s','QTs','QJs',
   'J8s','J9s','JTs','T7s','T8s','T9s','97s','98s','86s','87s','75s','76s','64s','65s','54s',
   'A2o','A3o','A4o','A5o','A6o','A7o','A8o','A9o','ATo','AJo','AQo','AKo',
   'K9o','KTo','KJo','KQo','QTo','QJo','JTo','T9o','T8o','98o','87o'
 ]);
-const buttonOpenHands = new Set([
+const buttonOpenHands = withPairs([
   'A2s','A3s','A4s','A5s','A6s','A7s','A8s','A9s','ATs','AJs','AQs','AKs',
   'K2s','K3s','K4s','K5s','K6s','K7s','K8s','K9s','KTs','KJs','KQs',
   'Q4s','Q5s','Q6s','Q7s','Q8s','Q9s','QTs','QJs',
@@ -21,8 +23,37 @@ const buttonOpenHands = new Set([
   'K7o','K8o','K9o','KTo','KJo','KQo','Q8o','Q9o','QTo','QJo',
   'J8o','J9o','JTo','T8o','T9o','98o','97o','87o','76o','65o','54o'
 ]);
-const positions = ['UTG','UTG+1','LJ','HJ','CO','BTN'];
-const app = { position:'UTG', mode:'fixed', correct:0, attempts:0, hand:null, cards:[], mistakes:[] };
+function rangeFromMatrix(rows){
+  const hands=[];
+  rows.forEach((row,i)=>[...row].forEach((cell,j)=>{
+    if(cell!=='X') return;
+    if(i===j) hands.push(ranks[i]+ranks[i]);
+    else if(j>i) hands.push(ranks[i]+ranks[j]+'s');
+    else hands.push(ranks[j]+ranks[i]+'o');
+  }));
+  return new Set(hands);
+}
+const mttRanges = {
+  'UTG': rangeFromMatrix(['XXXXXXXXXXXX.','XXXXXX.......','XXXXXX.......','X..XX........','....XX.......','.....X.......','......X......','.......X.....','........X....','.............','.............','.............','.............']),
+  'UTG+1': rangeFromMatrix(['XXXXXXXXXXXX.','XXXXXXX......','XXXXXX.......','X..XXX.......','X...XXX......','.....XX......','......X......','.......X.....','........X....','.........X...','.............','.............','.............']),
+  'UTG+2': rangeFromMatrix(['XXXXXXXXXXXXX','XXXXXXX......','XXXXXX.......','XX.XXX.......','XX..XXX......','.....XX......','......X......','.......XX....','........X....','.........X...','..........X..','.............','.............']),
+  'LJ': rangeFromMatrix(['XXXXXXXXXXXXX','XXXXXXXXX....','XXXXXX.......','XXXXXXX......','XXX.XXX......','X....XX......','......XX.....','.......XX....','........X....','.........X...','..........X..','...........X.','.............']),
+  'HJ': rangeFromMatrix(['XXXXXXXXXXXXX','XXXXXXXXXXX..','XXXXXXX......','XXXXXXX......','XXXXXXXX.....','X....XXX.....','X.....XX.....','.......XX....','........XX...','.........XX..','..........X..','...........X.','............X']),
+  'CO': rangeFromMatrix(['XXXXXXXXXXXXX','XXXXXXXXXXXXX','XXXXXXXXXX...','XXXXXXXX.....','XXXXXXXXX....','XXXXXXXXX....','X.....XXX....','X......XXX...','X.......XX...','X........XX..','..........X..','...........X.','............X']),
+  'BTN': rangeFromMatrix(['XXXXXXXXXXXXX','XXXXXXXXXXXXX','XXXXXXXXXXXXX','XXXXXXXXXXXX.','XXXXXXXXXXXX.','XXXXXXXXXX...','XXXXXXXXXX...','XX..XXXXXXX..','XX......XXX..','XX.......XXX.','X.........XX.','X..........X.','X...........X'])
+};
+const mttSmallBlind = {
+  raise: rangeFromMatrix(['...RRR...R...','..RRR........','R.R.R........','R..R.R.....RR','.R..R....RR..','........R....','....RR.......','...R..R.R....','.RR.......R..','...........RR','.............','.............','.............'].map(row=>row.replaceAll('R','X'))),
+  call: rangeFromMatrix(['CCC...CCC.CCC','CC...CCCCCCCC','.C.C.CCCCCCCC','.CC.C.CCCCC..','C.C.CCCCC..CC','CCCCCCCC.CCCC','CCCC..CC.CCCC','CCC.CC.C.CCCC','C..CCCCCCC.CC','CCCCCCCCCCCRR'.replaceAll('R','.'),'CCCCC...CCCRC'.replaceAll('R','.'),'CCCCC.....CC','CCCC........C'].map(row=>row.replaceAll('C','X')))
+};
+const mttSmallBlindOverrides = {
+  call: new Set(['JTo','76s','32s']),
+  raise: new Set(['TT','86s','75s','43s']),
+  fold: new Set(['43o'])
+};
+const cashPositions = ['UTG','UTG+1','LJ','HJ','CO','BTN'];
+const mttPositions = ['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB'];
+const app = { game:'mtt', position:'UTG', mode:'fixed', correct:0, attempts:0, hand:null, cards:[], mistakes:[] };
 const $ = (s) => document.querySelector(s);
 
 function handName(a,b){
@@ -32,20 +63,34 @@ function handName(a,b){
   return high.rank+low.rank+(a.suit.symbol===b.suit.symbol?'s':'o');
 }
 function currentRange(){
+  if(app.game==='mtt') return app.position==='SB' ? mttSmallBlind.raise : mttRanges[app.position];
   if(app.position==='BTN') return buttonOpenHands;
   if(app.position==='CO') return cutoffOpenHands;
   return ['LJ','HJ'].includes(app.position) ? middleOpenHands : earlyOpenHands;
 }
-function shouldRaise(hand){ return hand.length===2 || currentRange().has(hand); }
+function shouldRaise(hand){ return currentRange().has(hand); }
+function correctAction(hand){
+  if(app.game==='mtt' && app.position==='SB') {
+    if(mttSmallBlindOverrides.call.has(hand)) return 'call';
+    if(mttSmallBlindOverrides.raise.has(hand)) return 'raise';
+    if(mttSmallBlindOverrides.fold.has(hand)) return 'fold';
+  }
+  if(app.game==='mtt' && app.position==='SB' && mttSmallBlind.call.has(hand)) return 'call';
+  return shouldRaise(hand) ? 'raise' : 'fold';
+}
+function activePositions(){ return app.game==='mtt' ? mttPositions : cashPositions; }
 function setPosition(position){
   app.position=position;
   $('#positionText').textContent=app.position;
-  const markerClass={UTG:'utg','UTG+1':'utg1',LJ:'lj',HJ:'hj',CO:'co',BTN:'btn'}[app.position];
+  const markerClass=app.game==='mtt'
+    ? {UTG:'utg','UTG+1':'utg1','UTG+2':'lj',LJ:'hj',HJ:'co',CO:'btn',BTN:'sb',SB:'bb'}[app.position]
+    : {UTG:'utg','UTG+1':'utg1',LJ:'lj',HJ:'hj',CO:'co',BTN:'btn'}[app.position];
   $('#heroMarker').className='hero-marker '+markerClass;
   makeChart();
 }
 function setRandomPosition(){
   let position=app.position;
+  const positions=activePositions();
   while(position===app.position && positions.length>1) position=positions[Math.floor(Math.random()*positions.length)];
   setPosition(position);
 }
@@ -87,30 +132,43 @@ function renderHistory(){
   </li>`).join('');
 }
 function answer(action){
-  const raise=shouldRaise(app.hand), correct=(action==='raise')===raise;
+  const expected=correctAction(app.hand), correct=action===expected;
   app.attempts++; if(correct) app.correct++;
   else {
     app.mistakes.unshift({
       position:app.position,
       cards:app.cards.map(card=>`<span class="suit-${card.suit.color==='red'?'red':'blue'}">${card.rank}${card.suit.symbol}</span>`).join(' · '),
-      answer:raise?'RAISE':'FOLD'
+      answer:expected.toUpperCase()
     });
     renderHistory();
   }
   const actions=$('#actions'); actions.classList.add('locked');
   const chosen=$(`[data-action="${action}"]`); chosen.classList.add('chosen',correct?'correct':'wrong');
-  $(`[data-action="${raise?'raise':'fold'}"]`).classList.add('correct');
+  $(`[data-action="${expected}"]`).classList.add('correct');
   const feedback=$('#feedback'); feedback.hidden=false; feedback.className='feedback '+(correct?'':'incorrect');
   $('#feedbackIcon').textContent=correct?'✓':'×';
   $('#feedbackTitle').textContent=correct?'정답입니다!':'아쉽지만 다시 확인해 보세요.';
-  $('#feedbackText').textContent=`${app.hand}은(는) ${raise?'레이즈':'폴드'}하는 핸드입니다.`;
+  $('#feedbackText').textContent=`${app.hand}은(는) ${expected==='raise'?'레이즈':expected==='call'?'콜':'폴드'}하는 핸드입니다.`;
   $('#nextHand').hidden=correct;
   updateScore();
   if(correct) setTimeout(drawHand, 425);
 }
 function togglePosition(){
+  const positions=activePositions();
   const next=(positions.indexOf(app.position)+1)%positions.length;
   setPosition(positions[next]);
+}
+function setGame(game){
+  app.game=game;
+  const isMtt=game==='mtt';
+  document.querySelectorAll('[data-game]').forEach(button=>button.classList.toggle('active',button.dataset.game===game));
+  document.querySelector('header .eyebrow').textContent=isMtt?"NO LIMIT HOLD'EM · MTT · 75 BB · 9 HANDED":"NO LIMIT HOLD'EM · CASH · 8 HANDED";
+  const labels=isMtt
+    ? {'left':'UTG','upper-left':'UTG+1','top':'UTG+2','upper-right':'LJ','right':'HJ','bottom-right':'CO','bottom':'BTN','bottom-left':'SB'}
+    : {'left':'UTG','upper-left':'UTG+1','top':'LJ','upper-right':'HJ','right':'CO','bottom-right':'BTN','bottom':'SB','bottom-left':'BB'};
+  Object.entries(labels).forEach(([seat,label])=>document.querySelector(`[data-seat="${seat}"]`).textContent=label);
+  setPosition('UTG');
+  drawHand();
 }
 function toggleMode(){
   app.mode=app.mode==='fixed'?'random':'fixed';
@@ -123,7 +181,23 @@ function toggleMode(){
   if(random) drawHand();
 }
 function makeChart(){
+  if(app.game==='mtt'){
+    $('#rangePosition').textContent=`MTT · 75 BB · ${app.position}`;
+    const smallBlind=app.position==='SB';
+    $('#rangeLegend').className='legend mtt';
+    $('#rangeLegend').innerHTML=smallBlind?'<i></i> 빨간색 Raise · 초록색 Call':'<i></i> 빨간 핸드만 레이즈';
+    $('#rangeDescription').textContent='75BB · 9인 테이블 RFI · 빨간 핸드만 레이즈';
+    $('#rangeGrid').innerHTML=ranks.flatMap((row,i)=>ranks.map((col,j)=>{
+      let hand;
+      if(i===j) hand=row+col; else if(j>i) hand=row+col+'s'; else hand=col+row+'o';
+      const action=correctAction(hand);
+      return `<div class="range-cell ${i===j?'pair':''} ${action==='raise'?'open mtt-open':action==='call'?'mtt-call':''}">${hand}</div>`;
+    })).join('');
+    return;
+  }
   const middle=['LJ','HJ'].includes(app.position);
+  $('#rangeLegend').className='legend';
+  $('#rangeLegend').innerHTML='<i></i> 파란 핸드만 레이즈';
   const cutoff=app.position==='CO';
   const button=app.position==='BTN';
   $('#rangePosition').textContent=button?'BTN':cutoff?'CO':middle?'LJ / HJ':'UTG / UTG+1';
@@ -143,6 +217,6 @@ function makeChart(){
   })).join('');
 }
 document.querySelectorAll('.action').forEach(btn=>btn.addEventListener('click',()=>answer(btn.dataset.action)));
-$('#nextHand').addEventListener('click',drawHand); $('#switchPosition').addEventListener('click',togglePosition); $('#modeToggle').addEventListener('click',toggleMode);
+$('#nextHand').addEventListener('click',drawHand); $('#switchPosition').addEventListener('click',togglePosition); $('#modeToggle').addEventListener('click',toggleMode); document.querySelectorAll('[data-game]').forEach(button=>button.addEventListener('click',()=>setGame(button.dataset.game)));
 $('#chartButton').addEventListener('click',()=>{ makeChart(); $('#chartDialog').showModal(); }); $('#closeChart').addEventListener('click',()=>$('#chartDialog').close());
-makeChart(); drawHand(); updateScore(); renderHistory();
+setGame('mtt'); updateScore(); renderHistory();
