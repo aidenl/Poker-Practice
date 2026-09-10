@@ -27,8 +27,10 @@
       .mode-toggle{border:1px solid #426156;border-radius:13px;background:#19362c;color:#cde1d6;padding:4px 8px;font:500 9px 'DM Mono';letter-spacing:.05em;cursor:pointer}
       .mode-toggle.random{border-color:#448dc1;background:#176b9d24;color:#74c6ff}
       .switch-button:disabled{opacity:.35;cursor:not-allowed}
+      .hand-heading{display:flex;align-items:center;justify-content:center;gap:13px;margin-bottom:13px}.hand-heading .prompt{margin:0}.hand-stats{display:flex;gap:8px;color:#829a90;font:9px 'DM Mono';white-space:nowrap}.hand-stats span+span{border-left:1px solid #395349;padding-left:8px}.hand-stats strong{color:#dce9e0;font:500 10px 'DM Mono'}
+      .range-button{border:0;background:transparent;color:#74c6ff;padding:3px 0;font:500 10px 'DM Mono';cursor:pointer}.position-options{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.position-option{border:1px solid #49655a;background:#132a22;color:#a7bcb1;border-radius:8px;padding:10px 12px;font:500 12px 'DM Mono';cursor:pointer}.position-option.selected{border-color:#74c6ff;background:#176b9d32;color:#dff3ff}.select-all{width:100%;border:1px solid #456055;background:transparent;border-radius:8px;padding:10px;color:#c5d8cd;font:500 11px 'DM Mono';cursor:pointer}
     </style>
-    <style>.dealer-chip{position:absolute;right:-10px;top:-8px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#f6f0df;color:#183128;border:2px solid #b9d0c0;box-shadow:0 3px 7px #0007;font:700 11px 'DM Mono';font-style:normal}.history-hand .suit-red{color:#f07062}.history-hand .suit-blue{color:#74c6ff}.hero-marker.co{top:97px;right:-17px}.hero-marker.btn{bottom:-9px;right:14%}</style>
+    <style>.dealer-chip{z-index:3;position:absolute;right:10%;bottom:1px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;background:#f6f0df;color:#183128;border:2px solid #b9d0c0;box-shadow:0 3px 7px #0007;font:700 11px 'DM Mono';font-style:normal}.seat-mtt-bb{display:none}.poker-table.mtt .seat-mtt-bb{display:grid}.poker-table.mtt .seat-left{left:-23px;top:91px}.poker-table.mtt .seat-upper-left{left:2%;top:26px}.poker-table.mtt .seat-top{left:calc(43% - 24px);top:-17px}.poker-table.mtt .seat-upper-right{right:28%;top:2px}.poker-table.mtt .seat-right{right:-14px;top:55px}.poker-table.mtt .seat-bottom-right{left:calc(84% - 24px);right:auto;bottom:37px}.poker-table.mtt .seat-bottom{left:calc(65% - 24px);bottom:-11px}.poker-table.mtt .seat-bottom-left{left:calc(35% - 24px);bottom:-11px}.poker-table.mtt .seat-mtt-bb{left:calc(14% - 24px);bottom:15px}.poker-table.mtt .dealer-chip{right:auto;left:calc(65% + 16px);bottom:-17px}.card.heart,.history-hand .suit-heart{color:#d84c49}.card.diamond,.history-hand .suit-diamond{color:#2699e8}.card.club,.history-hand .suit-club{color:#2b9a4d}.card.spade,.history-hand .suit-spade{color:#12211d}.hero-marker.co{top:97px;right:-17px}.hero-marker.btn{bottom:-9px;right:14%}.hero-marker.mtt-utg{left:-23px;top:91px}.hero-marker.mtt-utg1{left:2%;top:26px}.hero-marker.mtt-utg2{left:calc(43% - 24px);top:-17px}.hero-marker.mtt-lj{right:28%;top:2px}.hero-marker.mtt-hj{right:-14px;top:55px}.hero-marker.mtt-co{left:calc(84% - 24px);bottom:37px}.hero-marker.mtt-btn{left:calc(65% - 24px);bottom:-11px}.hero-marker.mtt-sb{left:calc(35% - 24px);bottom:-11px}</style>
     <style>.hero-marker.sb{bottom:-27px;left:calc(50% - 24px)}.hero-marker.bb{bottom:-9px;left:14%}.range-cell.mtt-open{background:#ff5757;border-color:#ff9b9b}.range-cell.pair.mtt-open{background:#ff5757}.range-cell.mtt-call{background:#31a847;border-color:#93e39f}.legend.mtt i{background:#ff5757}.legend.mtt-call i{background:#31a847}.actions{grid-template-columns:repeat(3,1fr)}.call{border-color:#4ea65f;background:#248b3924}.call span{color:#73db80}</style>
   </head>
   <body>
@@ -57,8 +59,10 @@
             <div class="seat seat-left"><span data-seat="left">UTG</span></div>
             <div class="seat seat-right"><span data-seat="right">CO</span></div>
             <div class="seat seat-bottom-left"><span data-seat="bottom-left">BB</span></div>
-            <div class="seat seat-bottom-right"><span data-seat="bottom-right">BTN</span><i class="dealer-chip" aria-label="딜러 버튼">D</i></div>
+            <div class="seat seat-bottom-right"><span data-seat="bottom-right">BTN</span></div>
             <div class="seat seat-bottom"><span data-seat="bottom">SB</span></div>
+            <div class="seat seat-mtt-bb"><span>BB</span></div>
+            <i class="dealer-chip" aria-label="딜러 버튼">D</i>
             <div class="hero-marker utg" id="heroMarker"><span>HERO</span></div>
           </div>
         </div>
@@ -68,11 +72,19 @@
           <strong id="positionText">UTG</strong>
           <button id="switchPosition" class="switch-button">변경</button>
           <button id="modeToggle" class="mode-toggle" aria-pressed="false">FIXED</button>
+          <button id="randomPositions" class="range-button" hidden>범위 선택</button>
         </div>
       </section>
 
       <section class="decision-card" aria-live="polite">
-        <p class="prompt">당신의 핸드</p>
+        <div class="hand-heading">
+          <p class="prompt">당신의 핸드</p>
+          <div class="hand-stats" aria-label="학습 통계">
+            <span>정답 <strong id="correctCount">0</strong></span>
+            <span>시도 <strong id="attemptCount">0</strong></span>
+            <span>정확도 <strong id="accuracy">—</strong></span>
+          </div>
+        </div>
         <div class="hand-display" id="handDisplay" aria-label="현재 핸드">
           <div class="card red"><b>A</b><span>♥</span></div>
           <div class="card black"><b>K</b><span>♠</span></div>
@@ -80,8 +92,8 @@
         <p class="question">첫 액션입니다. 어떻게 플레이할까요?</p>
         <div class="actions" id="actions">
           <button class="action fold" data-action="fold"><span>FOLD</span><small>핸드를 버린다</small></button>
-          <button class="action call" data-action="call"><span>CALL</span><small>빅 블라인드를 맞춘다</small></button>
           <button class="action raise" data-action="raise"><span>RAISE</span><small>2.5 BB 오픈</small></button>
+          <button class="action call" data-action="call"><span>CALL</span><small>빅 블라인드를 맞춘다</small></button>
         </div>
         <div class="feedback" id="feedback" hidden>
           <span class="feedback-icon" id="feedbackIcon">✓</span>
@@ -90,11 +102,6 @@
         </div>
       </section>
 
-      <footer>
-        <div><span>정답</span><strong id="correctCount">0</strong></div>
-        <div><span>시도</span><strong id="attemptCount">0</strong></div>
-        <div><span>정확도</span><strong id="accuracy">—</strong></div>
-      </footer>
     </main>
     <aside class="history-panel" aria-label="오답 히스토리">
       <div class="history-heading">
@@ -111,6 +118,12 @@
       <p class="legend" id="rangeLegend"><i></i> 파란 핸드만 레이즈</p>
       <div class="range-grid" id="rangeGrid" aria-label="오프닝 핸드 차트"></div>
       <p class="dialog-note" id="rangeDescription">페어, AJs+, AQo+, KQs, QJs, JTs, T9s, 98s</p>
+    </dialog>
+    <dialog id="positionDialog">
+      <div class="dialog-head"><div><p class="eyebrow">RANDOM MODE</p><h2>출제 포지션 선택</h2></div><button id="closePositions" class="icon-button" aria-label="닫기">×</button></div>
+      <p class="dialog-note">선택한 포지션 안에서만 랜덤으로 출제됩니다.</p>
+      <div class="position-options" id="positionOptions"></div>
+      <button class="select-all" id="selectAllPositions">전체 선택</button>
     </dialog>
     <script src="app.js"></script>
     <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>

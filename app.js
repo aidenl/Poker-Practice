@@ -1,5 +1,5 @@
 const ranks = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
-const suits = [{symbol:'♥',color:'red'},{symbol:'♦',color:'red'},{symbol:'♠',color:'black'},{symbol:'♣',color:'black'}];
+const suits = [{symbol:'♥',color:'heart'},{symbol:'♦',color:'diamond'},{symbol:'♠',color:'spade'},{symbol:'♣',color:'club'}];
 const allPairs = new Set(ranks.map(rank=>rank+rank));
 const withPairs = hands => new Set([...allPairs,...hands]);
 const earlyOpenHands = withPairs(['AJs','AQs','AKs','AQo','AKo','KQs','QJs','JTs','T9s','98s']);
@@ -53,7 +53,7 @@ const mttSmallBlindOverrides = {
 };
 const cashPositions = ['UTG','UTG+1','LJ','HJ','CO','BTN'];
 const mttPositions = ['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB'];
-const app = { game:'mtt', position:'UTG', mode:'fixed', correct:0, attempts:0, hand:null, cards:[], mistakes:[] };
+const app = { game:'mtt', position:'UTG', mode:'fixed', randomPositions:new Set(mttPositions), correct:0, attempts:0, hand:null, cards:[], mistakes:[] };
 const $ = (s) => document.querySelector(s);
 
 function handName(a,b){
@@ -83,24 +83,43 @@ function setPosition(position){
   app.position=position;
   $('#positionText').textContent=app.position;
   const markerClass=app.game==='mtt'
-    ? {UTG:'utg','UTG+1':'utg1','UTG+2':'lj',LJ:'hj',HJ:'co',CO:'btn',BTN:'sb',SB:'bb'}[app.position]
+    ? {UTG:'mtt-utg','UTG+1':'mtt-utg1','UTG+2':'mtt-utg2',LJ:'mtt-lj',HJ:'mtt-hj',CO:'mtt-co',BTN:'mtt-btn',SB:'mtt-sb'}[app.position]
     : {UTG:'utg','UTG+1':'utg1',LJ:'lj',HJ:'hj',CO:'co',BTN:'btn'}[app.position];
   $('#heroMarker').className='hero-marker '+markerClass;
   makeChart();
 }
 function setRandomPosition(){
   let position=app.position;
-  const positions=activePositions();
+  const positions=activePositions().filter(item=>app.randomPositions.has(item));
   while(position===app.position && positions.length>1) position=positions[Math.floor(Math.random()*positions.length)];
   setPosition(position);
 }
-function drawHand(){
-  if(app.mode==='random') setRandomPosition();
+function randomCards(){
   const cards=[];
   while(cards.length<2){
     const card={rank:ranks[Math.floor(Math.random()*ranks.length)],suit:suits[Math.floor(Math.random()*suits.length)]};
     if(!cards.some(c=>c.rank===card.rank && c.suit.symbol===card.suit.symbol)) cards.push(card);
   }
+  return cards;
+}
+function cardsForHand(hand){
+  const first=hand[0], second=hand[1];
+  const firstSuit=suits[Math.floor(Math.random()*suits.length)];
+  if(first===second){
+    const otherSuits=suits.filter(suit=>suit.symbol!==firstSuit.symbol);
+    return [{rank:first,suit:firstSuit},{rank:second,suit:otherSuits[Math.floor(Math.random()*otherSuits.length)]}];
+  }
+  if(hand[2]==='s') return [{rank:first,suit:firstSuit},{rank:second,suit:firstSuit}];
+  const otherSuits=suits.filter(suit=>suit.symbol!==firstSuit.symbol);
+  return [{rank:first,suit:firstSuit},{rank:second,suit:otherSuits[Math.floor(Math.random()*otherSuits.length)]}];
+}
+function drawHand(){
+  if(app.mode==='random') setRandomPosition();
+  const raiseHands=[...currentRange()];
+  const prioritizeRaiseRange=app.position!=='SB' && Math.random()<0.25;
+  const cards=prioritizeRaiseRange && raiseHands.length
+    ? cardsForHand(raiseHands[Math.floor(Math.random()*raiseHands.length)])
+    : randomCards();
   app.hand=handName(cards[0],cards[1]);
   app.cards=cards;
   const handDisplay=$('#handDisplay');
@@ -137,7 +156,7 @@ function answer(action){
   else {
     app.mistakes.unshift({
       position:app.position,
-      cards:app.cards.map(card=>`<span class="suit-${card.suit.color==='red'?'red':'blue'}">${card.rank}${card.suit.symbol}</span>`).join(' · '),
+      cards:app.cards.map(card=>`<span class="suit-${card.suit.color}">${card.rank}${card.suit.symbol}</span>`).join(' · '),
       answer:expected.toUpperCase()
     });
     renderHistory();
@@ -161,12 +180,15 @@ function togglePosition(){
 function setGame(game){
   app.game=game;
   const isMtt=game==='mtt';
+  document.querySelector('.poker-table').classList.toggle('mtt',isMtt);
   document.querySelectorAll('[data-game]').forEach(button=>button.classList.toggle('active',button.dataset.game===game));
   document.querySelector('header .eyebrow').textContent=isMtt?"NO LIMIT HOLD'EM · MTT · 75 BB · 9 HANDED":"NO LIMIT HOLD'EM · CASH · 8 HANDED";
   const labels=isMtt
     ? {'left':'UTG','upper-left':'UTG+1','top':'UTG+2','upper-right':'LJ','right':'HJ','bottom-right':'CO','bottom':'BTN','bottom-left':'SB'}
     : {'left':'UTG','upper-left':'UTG+1','top':'LJ','upper-right':'HJ','right':'CO','bottom-right':'BTN','bottom':'SB','bottom-left':'BB'};
   Object.entries(labels).forEach(([seat,label])=>document.querySelector(`[data-seat="${seat}"]`).textContent=label);
+  app.randomPositions=new Set(activePositions());
+  updateRandomPositionButton();
   setPosition('UTG');
   drawHand();
 }
@@ -178,7 +200,22 @@ function toggleMode(){
   button.classList.toggle('random',random);
   button.setAttribute('aria-pressed',random);
   $('#switchPosition').disabled=random;
+  $('#randomPositions').hidden=!random;
   if(random) drawHand();
+}
+function updateRandomPositionButton(){
+  const count=app.randomPositions.size;
+  $('#randomPositions').textContent=count===activePositions().length?'전체 자리':`${count}개 자리`;
+}
+function renderPositionOptions(){
+  $('#positionOptions').innerHTML=activePositions().map(position=>`<button class="position-option ${app.randomPositions.has(position)?'selected':''}" data-random-position="${position}">${position}</button>`).join('');
+  document.querySelectorAll('[data-random-position]').forEach(button=>button.addEventListener('click',()=>{
+    const position=button.dataset.randomPosition;
+    if(app.randomPositions.has(position) && app.randomPositions.size===1) return;
+    app.randomPositions.has(position) ? app.randomPositions.delete(position) : app.randomPositions.add(position);
+    renderPositionOptions();
+    updateRandomPositionButton();
+  }));
 }
 function makeChart(){
   if(app.game==='mtt'){
@@ -217,6 +254,6 @@ function makeChart(){
   })).join('');
 }
 document.querySelectorAll('.action').forEach(btn=>btn.addEventListener('click',()=>answer(btn.dataset.action)));
-$('#nextHand').addEventListener('click',drawHand); $('#switchPosition').addEventListener('click',togglePosition); $('#modeToggle').addEventListener('click',toggleMode); document.querySelectorAll('[data-game]').forEach(button=>button.addEventListener('click',()=>setGame(button.dataset.game)));
+$('#nextHand').addEventListener('click',drawHand); $('#switchPosition').addEventListener('click',togglePosition); $('#modeToggle').addEventListener('click',toggleMode); $('#randomPositions').addEventListener('click',()=>{renderPositionOptions(); $('#positionDialog').showModal();}); $('#closePositions').addEventListener('click',()=>$('#positionDialog').close()); $('#selectAllPositions').addEventListener('click',()=>{app.randomPositions=new Set(activePositions());renderPositionOptions();updateRandomPositionButton();}); document.querySelectorAll('[data-game]').forEach(button=>button.addEventListener('click',()=>setGame(button.dataset.game)));
 $('#chartButton').addEventListener('click',()=>{ makeChart(); $('#chartDialog').showModal(); }); $('#closeChart').addEventListener('click',()=>$('#chartDialog').close());
 setGame('mtt'); updateScore(); renderHistory();
